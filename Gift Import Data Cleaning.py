@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[161]:
+# In[3]:
 
 
 import pandas as pd
@@ -17,12 +17,13 @@ import re # regex for string matching
 
 # *UPDATE HERE* - every CSV import below
 
-# 1. T3010 Donees dataset - delete all unnecessary columns first
-donees = pd.read_csv(r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\T3010 - Donees - 2019 - CW - prepped.csv',
+# 1. UPDATE ACCORDING TO YEAR, T3010 Donees dataset - delete all unnecessary columns first
+donees = pd.read_csv(r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\T3010 - Donees - 2020 - CW - prepped.csv',
                     encoding='ANSI')
 
-# 2. Master Reference Table - Gift Data from Gift Data Tracking Sheet
-reference = pd.read_csv(r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\Gift Data Tracking - Master Reference Table 2019.csv')
+# 2. UPDATE ACCORDING TO YEAR, Master Reference Table - Gift Data from Gift Data Tracking Sheet
+#    If no gift data from this year has been added to GC yet, then just upload a CSV with the headers + empty columns
+reference = pd.read_csv(r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\Gift Data Tracking - Master Reference Table 2020.csv')
 
 # 3. Masterlist report from Contenta containing all foundations we have in GC
 masterlist = pd.read_csv(r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\Contenta MasterList.csv')
@@ -34,11 +35,12 @@ charities = pd.read_csv(r'C:\Users\Catherine\Documents\Imagine Canada\Gift Impor
 print (donees)
 
 
-# In[162]:
+# In[62]:
 
 
 # Step 4
 
+# *UPDATE HERE* - if necessary
 # Use this commented-out code if unnecessary columns haven't been deleted yet
 # donees = pd.DataFrame(donees, columns= ['BN/Registration number', 'Donee Business number', 'Donee Name', 
 #                                        'City', 'Total amount gifts'])
@@ -48,19 +50,19 @@ donees.rename(columns = {"BN/Registration number": "BN", "Donee Business number"
 print(donees)
 
 
-# In[163]:
+# In[63]:
 
 
 # Add columns
 # *UPDATE HERE* - Update Year accordingly
-donees['Year'] = 2019
+donees['Year'] = 2020
 donees['Purpose'] = ""
 # donees['Foundation Activity'] = [] - might not need to add now, will add in step 7
 
 print(donees)
 
 
-# In[164]:
+# In[64]:
 
 
 # Step 5 - Identify and remove any funder not in GC
@@ -74,7 +76,7 @@ step_five = pd.merge(donees, keep_bn, on ='BN', how ='inner')
 print(step_five)
 
 
-# In[165]:
+# In[65]:
 
 
 # Step 6 - Identify and remove any gifts already uploaded into GC
@@ -88,7 +90,7 @@ donees = step_five[~step_five['BN'].isin(ref_bn)]
 print(donees)
 
 
-# In[166]:
+# In[66]:
 
 
 # Update the Master Reference Table - Gift Data sheet in the Gift Data Tracking workbook with new gifting funders this year
@@ -106,7 +108,7 @@ ref_update.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cle
                    encoding = 'ANSI', index = False, header=True)
 
 
-# In[190]:
+# In[67]:
 
 
 # Step 7 - Foundation Activity
@@ -123,7 +125,7 @@ step_seven = pd.merge(donees, activity, on ='BN', how ='left')
 step_seven['FoundationActivity'].value_counts()
 
 
-# In[168]:
+# In[68]:
 
 
 # Step 8
@@ -139,7 +141,7 @@ donees.reset_index(drop=True, inplace=True)
 print(donees)
 
 
-# In[169]:
+# In[69]:
 
 
 # Count by foundation activity again
@@ -152,7 +154,7 @@ print(grantmaking_foundations)
 grantmaking_foundations['FoundationActivity'].value_counts()
 
 
-# In[170]:
+# In[70]:
 
 
 # Step 9 - Check length of BNs, missing RR0001, etc.
@@ -166,7 +168,7 @@ print(donees)
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[171]:
+# In[71]:
 
 
 # Check if DoneeBNs have letters in them
@@ -175,7 +177,7 @@ print(donees)
 donees['contains_letters'] = donees['DoneeBN'].str.findall("[a-zA-Z]")
 
 
-# In[172]:
+# In[72]:
 
 
 # Deal with different types of BN problems
@@ -206,7 +208,7 @@ print(donees[donees['DoneeBN_len'] == 9])
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[173]:
+# In[73]:
 
 
 # 3. Replace rr with RR in DoneeBN where contains_letters = ['r', 'r'] in 15-character BNs
@@ -224,7 +226,7 @@ donees['DoneeBN'] = np.select(cond_4, choices_4, donees.DoneeBN)
 print(donees[donees['DoneeBN_len'] == 15])
 
 
-# In[174]:
+# In[74]:
 
 
 # 5. 14 characters
@@ -263,7 +265,7 @@ print(donees[donees['DoneeBN_len'] == 14])
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[175]:
+# In[75]:
 
 
 # 6. Where contains_letters = ["R"] and DoneeBN_len = 14, replace R with RR
@@ -286,7 +288,7 @@ donees['DoneeBN'] = np.where((donees['just_R'] == 'TRUE') & (donees['DoneeBN_len
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[176]:
+# In[76]:
 
 
 # Calculate contains_letters and DoneeBN_len again, now that DoneeBN has been updated
@@ -298,7 +300,7 @@ donees['contains_letters'] = donees['DoneeBN'].str.findall("[a-zA-Z]")
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[177]:
+# In[77]:
 
 
 # Calculate contains_letters and DoneeBN_len again, now that DoneeBN has been updated
@@ -310,7 +312,7 @@ donees['contains_letters'] = donees['DoneeBN'].str.findall("[a-zA-Z]")
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[178]:
+# In[78]:
 
 
 # 8. Delete DoneeBN where length < 15
@@ -324,7 +326,7 @@ donees['DoneeBN'] = np.select(cond_8, choices_8, donees.DoneeBN)
 print(donees[donees['DoneeBN_len'] < 15])
 
 
-# In[179]:
+# In[79]:
 
 
 # Step 10 - Remove gift records missing both DoneeName and DoneeBN
@@ -336,7 +338,7 @@ donees.drop(donees[(donees['DoneeName'].isnull()) & (donees['DoneeBN'].isnull())
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[180]:
+# In[80]:
 
 
 # Step 12 before 11 since part of it can be automated

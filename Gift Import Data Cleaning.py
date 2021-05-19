@@ -377,8 +377,11 @@ donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleanin
 # Add column that is TRUE if DoneeName contains "see attached, qualified donee, voir liste, etc."
 # (?i) makes regex Case Insensitive
 donees['bad_Name'] = donees['DoneeName'].str.contains("attached|qualified donee|voir la liste|voir liste(?i)")
+
+# CHANGED: Now classifies a negative Reported_Amt as "True" in bad_Amt (for manual examination after export)
+# Also updated description under Step 11 below to reflect this change
 # Add column that is TRUE if ReportedAmt contains any letters/words
-donees['bad_Amt'] = donees['ReportedAmt'].str.contains("[a-zA-Z]")
+donees['bad_Amt'] = np.logical_or(donees['ReportedAmt'].str.contains("[a-zA-Z]"), donees['ReportedAmt'].str.contains("-"))
 
 # Convert boolean to string so we can print the dataframe here
 mask = donees.applymap(type) != bool
@@ -394,7 +397,7 @@ donees.drop(['DoneeBN_len', 'contains_letters', 'RR', 'rr', 'just_R'], axis=1, i
 # To be done manually since, in a few instances, a funder may report ALL of their gifts as a deductible/negative value.
 # In that case, the gifts need to be converted to positive values.
 
-# Upon export, remove gifts with ReportedAmt < $0, then remove gifts with bad_Name or bad_Amt = TRUE (if it makes sense to)
+# Upon export, remove gifts with bad_Name or bad_Amt = TRUE (if it makes sense to)
 # *UPDATE HERE* - Update path to your own local folder
 donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\readyforStep11.csv',
                    encoding = 'ANSI', index = False, header=True)

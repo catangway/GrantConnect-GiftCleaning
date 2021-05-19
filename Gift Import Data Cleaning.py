@@ -42,7 +42,7 @@ print (donees)
 
 # *UPDATE HERE* - if necessary
 # Use this commented-out code if unnecessary columns haven't been deleted yet
-donees = pd.DataFrame(donees, columns= ['BN/Registration number', 'Donee Business number', 'Donee Name', 
+donees = pd.DataFrame(donees, columns= ['BN/Registration number', 'Donee Business number', 'Donee Name',
                                         'City', 'Total amount gifts'])
 
 donees.rename(columns = {"BN/Registration number": "BN", "Donee Business number": "DoneeBN",
@@ -66,13 +66,13 @@ print(donees)
 
 
 # Step 5 - Identify and remove any funder not in GC
+# CHANGED: merge was causing duplications in gift records for duplicate BNs. Change to same method as step 6 below.
 
 # Rename masterlist Funder BN to match Donees BN column so we can join the two datasets
 masterlist.rename(columns = {"BusinessNumber": "BN"}, inplace = True)
-keep_bn = pd.DataFrame(masterlist, columns= ['BN'])
+mast_bn = masterlist['BN'].tolist()
 
-
-step_five = pd.merge(donees, keep_bn, on ='BN', how ='inner')
+step_five = donees[donees['BN'].isin(mast_bn)]
 print(step_five)
 
 
@@ -104,7 +104,7 @@ print(ref_update)
 
 # *UPDATE HERE* - Update path to your own local folder, and remember to use this CSV to update the Gift Data Tracking workbook
 # *UPDATE GIFT TRACKING*
-ref_update.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\step6_update_tracking.csv', 
+ref_update.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\step6_update_tracking.csv',
                    encoding = 'ANSI', index = False, header=True)
 
 
@@ -118,18 +118,23 @@ activity = pd.DataFrame(masterlist, columns= ['BN', 'FoundationActivity'])
 
 # Count by foundation activity
 step_seven = pd.merge(donees, activity, on ='BN', how ='left')
+# CHANGED: Want to filter so only activities that contain "Grantmaking" are left
+step_seven = step_seven[step_seven['FoundationActivity'].str.contains("Grantmaking", na=False)]
 
 # *UPDATE GIFT TRACKING*
 # Update the Master Reference Table - Gift Data sheet in the Gift Data Tracking workbook with number of grantmaking foundations
 # Add up all the counts of grantmaking values
-step_seven['FoundationActivity'].value_counts()
-
+# CHANGED: Now outputs total number (sum) of grantmaking orgs left instead of counts for individual combos of Foundation Activities
+counts = step_seven['FoundationActivity'].value_counts()
+counts = counts.to_frame()
+print(sum(counts["FoundationActivity"]))
 
 # In[28]:
 
 
 # Step 8
-charities.rename(columns = {"BN/Registration number:": "BN"}, inplace = True)
+# CHANGED: "BN/Registration number:" to "BN/Registration Number" (case sensitive, removed colon)
+charities.rename(columns = {"BN/Registration Number": "BN"}, inplace = True)
 
 cra_bn = charities['BN'].tolist()
 
@@ -145,13 +150,18 @@ print(donees)
 
 
 # Count by foundation activity again
+# CHANGED: filter for only grantmaking, output sum (same as previous)
+
 grantmaking_foundations = pd.merge(donees, activity, on ='BN', how ='left')
+grantmaking_foundations = grantmaking_foundations[grantmaking_foundations['FoundationActivity'].str.contains("Grantmaking", na=False)]
 print(grantmaking_foundations)
 
 # *UPDATE GIFT TRACKING*
 # Update the Master Reference Table - Gift Data sheet in the Gift Data Tracking workbook with number of grantmaking foundations
 # Add up all the counts of grantmaking values
-grantmaking_foundations['FoundationActivity'].value_counts()
+counts = grantmaking_foundations['FoundationActivity'].value_counts()
+counts = counts.to_frame()
+print(sum(counts["FoundationActivity"]))
 
 
 # In[30]:
@@ -164,7 +174,7 @@ print(donees)
 
 # Just for QA'ing the code:
 # bn_check = donees[donees['DoneeBN_len'] < 15]
-# bn_check.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\bn_check.csv', 
+# bn_check.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\bn_check.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 
 
@@ -195,7 +205,7 @@ d = {True: 'TRUE', False: 'FALSE'}
 donees = donees.where(mask, donees.replace(d))
 
 # Apply conditions using np.select
-cond_12 = [(donees.DoneeBN_len == 9) & (donees.contains_letters.str.len() == 0), 
+cond_12 = [(donees.DoneeBN_len == 9) & (donees.contains_letters.str.len() == 0),
           (donees.DoneeBN_len == 11) & donees.DoneeBN.str.endswith("RR") & (donees.RR == "TRUE")]
 choices_12 = [donees.DoneeBN + "RR0001", donees.DoneeBN + "0001"]
 
@@ -204,7 +214,7 @@ donees['DoneeBN'] = np.select(cond_12, choices_12, donees.DoneeBN)
 print(donees[donees['DoneeBN_len'] == 9])
 
 # Checkpoint - Check that RR0001 and 0001 were added correctly
-# donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\9digits.csv', 
+# donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\9digits.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 
 
@@ -232,7 +242,7 @@ print(donees[donees['DoneeBN_len'] == 15])
 # 5. 14 characters
 # Find and replace RR001 with RR0001, RR000 with RR0001
 # Find and replace 0R0001 with 0RR0001, 1R0001 with 1RR0001, etc.
-cond_5 = [(donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("RR001")), 
+cond_5 = [(donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("RR001")),
           (donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("RR000")),
           (donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("0R0001")),
           (donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("1R0001")),
@@ -244,14 +254,14 @@ cond_5 = [(donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("RR001")),
           (donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("7R0001")),
           (donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("8R0001")),
           (donees.DoneeBN_len == 14) & (donees.DoneeBN.str.endswith("9R0001"))]
-choices_5 = [donees.DoneeBN.str.replace("RR001", "RR0001"), 
+choices_5 = [donees.DoneeBN.str.replace("RR001", "RR0001"),
             donees.DoneeBN.str.replace("RR000", "RR0001"),
             donees.DoneeBN.str.replace("0R0001", "0RR0001"),
-            donees.DoneeBN.str.replace("1R0001", "1RR0001"), 
+            donees.DoneeBN.str.replace("1R0001", "1RR0001"),
             donees.DoneeBN.str.replace("2R0001", "2RR0001"),
             donees.DoneeBN.str.replace("3R0001", "3RR0001"),
             donees.DoneeBN.str.replace("4R0001", "4RR0001"),
-            donees.DoneeBN.str.replace("5R0001", "5RR0001"), 
+            donees.DoneeBN.str.replace("5R0001", "5RR0001"),
             donees.DoneeBN.str.replace("6R0001", "6RR0001"),
             donees.DoneeBN.str.replace("7R0001", "7RR0001"),
             donees.DoneeBN.str.replace("8R0001", "8RR0001"),
@@ -261,14 +271,16 @@ donees['DoneeBN'] = np.select(cond_5, choices_5, donees.DoneeBN)
 print(donees[donees['DoneeBN_len'] == 14])
 
 # Checkpoint
-#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\14digits.csv', 
+#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\14digits.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 
 
-# In[35]:
+# In[75]:
 
 
 # 6. Where contains_letters = ["R"] and DoneeBN_len = 14, replace R with RR
+# QUESTION: Is this taken care of in the step above?
+# Didn't seem to make any differences with the gift data file I was using but maybe I'm missing something
 
 # Add a column that is True if the only letter in DoneeBN is one R, and False otherwise
 donees['just_R'] = donees['contains_letters'].apply(lambda x: x==['R'])
@@ -283,8 +295,8 @@ donees['DoneeBN'] = np.where((donees['just_R'] == 'TRUE') & (donees['DoneeBN_len
                        donees['DoneeBN'].str.replace(r'\dR\d','RR', regex = True),
                        donees['DoneeBN'])
 
-# Checkpoint - Check that 14-character DoneeBNs with R now have RR instead 
-#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\replaceR.csv', 
+# Checkpoint - Check that 14-character DoneeBNs with R now have RR instead
+#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\replaceR.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 
 
@@ -296,7 +308,7 @@ donees['DoneeBN_len'] = donees['DoneeBN'].str.len()
 donees['contains_letters'] = donees['DoneeBN'].str.findall("[a-zA-Z]")
 
 # Checkpoint - check that the new columns have the right values
-#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\bn_check2.csv', 
+#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\bn_check2.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 
 
@@ -308,7 +320,7 @@ donees['DoneeBN_len'] = donees['DoneeBN'].str.len()
 donees['contains_letters'] = donees['DoneeBN'].str.findall("[a-zA-Z]")
 
 # Checkpoint - check that no 15-character DoneeBNs have any letters other than RR
-#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\condition7.csv', 
+#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\condition7.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 
 
@@ -321,9 +333,26 @@ choices_8 = [""]
 donees['DoneeBN'] = np.select(cond_8, choices_8, donees.DoneeBN)
 
 # Checkpoint - only 15-character DoneeBNs should remain
-#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\final_15digit.csv', 
+#donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\final_15digit.csv',
 #                   encoding = 'ANSI', index = False, header=True)
 print(donees[donees['DoneeBN_len'] < 15])
+
+# CHANGED (Added section): Valid BN check for DoneeBN
+# Remove BNs that aren't in "Charities - All" (still step 9)
+# For the Mar/21 file, this leaves 33 less valid BNs than manual cleaning (presumably because it's not picking up some more nuanced cases that can be updated manually).
+# I think this is fine? We might want to try it on a bigger dataset to double check.
+
+valid_BN = charities['BN'].tolist()
+
+cond_9 = [~donees['DoneeBN'].isin(valid_BN)]
+choices_9 = [""]
+donees['DoneeBN'] = np.select(cond_9, choices_9, donees.DoneeBN)
+
+# Calculate contains_letters and DoneeBN_len (last time), now that DoneeBN has been updated
+donees['DoneeBN_len'] = donees['DoneeBN'].str.len()
+donees['contains_letters'] = donees['DoneeBN'].str.findall("[a-zA-Z]")
+
+print(donees[donees['DoneeBN_len'] == 15])
 
 
 # In[39]:
@@ -334,7 +363,7 @@ print(donees[donees['DoneeBN_len'] < 15])
 donees.drop(donees[(donees['DoneeName'].isnull()) & (donees['DoneeBN'].isnull())].index, inplace = True)
 
 # Check that the correct gift records were deleted
-donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\nonameBN.csv', 
+donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\nonameBN.csv',
                    encoding = 'ANSI', index = False, header=True)
 
 
@@ -348,8 +377,11 @@ donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleanin
 # Add column that is TRUE if DoneeName contains "see attached, qualified donee, voir liste, etc."
 # (?i) makes regex Case Insensitive
 donees['bad_Name'] = donees['DoneeName'].str.contains("attached|qualified donee|voir la liste|voir liste(?i)")
+
+# CHANGED: Now classifies a negative Reported_Amt as "True" in bad_Amt (for manual examination after export)
+# Also updated description under Step 11 below to reflect this change
 # Add column that is TRUE if ReportedAmt contains any letters/words
-donees['bad_Amt'] = donees['ReportedAmt'].str.contains("[a-zA-Z]")
+donees['bad_Amt'] = np.logical_or(donees['ReportedAmt'].str.contains("[a-zA-Z]"), donees['ReportedAmt'].str.contains("-"))
 
 # Convert boolean to string so we can print the dataframe here
 mask = donees.applymap(type) != bool
@@ -365,8 +397,8 @@ donees.drop(['DoneeBN_len', 'contains_letters', 'RR', 'rr', 'just_R'], axis=1, i
 # To be done manually since, in a few instances, a funder may report ALL of their gifts as a deductible/negative value.
 # In that case, the gifts need to be converted to positive values.
 
-# Upon export, remove gifts with ReportedAmt < $0, then remove gifts with bad_Name or bad_Amt = TRUE (if it makes sense to)
+# Upon export, remove gifts with bad_Name or bad_Amt = TRUE (if it makes sense to)
 # *UPDATE HERE* - Update path to your own local folder
-donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\readyforStep11.csv', 
+donees.to_csv (r'C:\Users\Catherine\Documents\Imagine Canada\Gift Import Cleaning\readyforStep11.csv',
                    encoding = 'ANSI', index = False, header=True)
 
